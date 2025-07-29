@@ -1,0 +1,90 @@
+name: Install OpenSSH
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        type: choice
+        description: 'branch [develop]'
+        options:
+          - develop
+        required: true
+      environment_type:
+        type: choice
+        description: 'Please select env type'
+        options:
+          - Singletenant
+          - Multitenant
+        required: true
+      version:
+        description: 'Version [9.9.9]'
+        required: true
+      environment_name:
+        description: 'Env to be picked [dev, prep, prod]'
+        required: true
+      cloud_provider:
+        type: choice
+        description: 'Please select cloud provider'
+        options:
+          - azure
+          - gcp
+        required: true
+      secret_githubactions_env:
+        type: choice
+        description: 'Please select the GH Environment'
+        options:
+          - AZURE_MT_DEV
+        required: true
+      host_name:
+        description: 'Host name (fill it with "all" to run on all respective hosts)'
+        required: true
+
+env:
+  ACTIONS_ALLOW_UNSECURE_NODE_VERSION: true
+  BRANCH: ${{ github.event.inputs.branch }}
+  ENVIRONMENT_TYPE: ${{ github.event.inputs.environment_type }}
+  VERSION: ${{ github.event.inputs.version }}
+  ENVIRONMENT_NAME: ${{ github.event.inputs.environment_name }}
+  CLOUD_PROVIDER: ${{ github.event.inputs.cloud_provider }}
+  ENVIRONMENT: ${{ github.event.inputs.secret_githubactions_env }}
+  HOST_NAME: ${{ github.event.inputs.host_name }}
+  GCP_SECRET: ${{ secrets.CREDS }}
+  GCP_PROJECT_ID: ${{ secrets.PROJECT_ID }}
+  GH_PAT: ${{ secrets.LOYALTY_GITHUB_PAT }}
+  AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+  AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+  AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+  AZURE_KEYVAULT_URL: ${{ secrets.AZURE_KEYVAULT_URL }}
+
+jobs:
+  deploy_openssh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Ansible repo
+        uses: actions/checkout@v4
+        with:
+          repository: snigdha-ansible
+          token: ${{ env.GH_PAT }}
+          ref: ${{ env.BRANCH }}
+          path: snigdha-ansible
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+
+      - name: Install Ansible
+        run: |
+          python -m pip install --upgrade pip
+          pip install ansible
+
+      - name: Retrieve secrets
+        run: |
+          if [[ "${{ env.CLOUD_PROVIDER }}" == "gcp" ]]; then
+            python3 snigdha-ansible/scripts/get-secrets-gcp.py ${{ env.GCP_PROJECT_ID }}
+          else
+            python3 snigdha-ansible/scripts/get-secrets-azure.py ${{ env.AZURE_KEYVAULT_URL }}
+          fi
+          mv secrets.yaml snigdha-ansible/${{ env.ENVIRONMENT_TYPE }}/${{ env.CLOUD_PROVIDER }}/${{ env.ENVIRONMENT_NAME }}/group_vars/keys.yaml
+
+      - name: Install OpenSSH
+        run: |
+          ansible-playbook snigdha-ansible/${{ env.ENVIRONMENT_TYPE }}/${{ env.VERSION }}/deploy-openssh.yaml -i snigdha-ansible/${{ env.ENVIRONMENT_TYPE }}/${{ env.CLOUD_PROVIDER }}/${{ env.ENVIRONMENT_NAME }}/hosts.ini -vv --limit ${{ env.HOST_NAME }}
