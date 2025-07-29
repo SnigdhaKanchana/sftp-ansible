@@ -1,0 +1,75 @@
+- name: Reinstall OpenSSH on Windows VM
+  hosts: all
+  gather_facts: yes
+  tasks:
+    - name: Check if OpenSSH.Client is installed
+      win_feature:
+        name: OpenSSH.Client
+        state: present
+      register: client_result
+      tags: check
+
+    - name: Check if OpenSSH.Server is installed
+      win_feature:
+        name: OpenSSH.Server
+        state: present
+      register: server_result
+      tags: check
+
+    - name: Uninstall OpenSSH.Client if present
+      win_feature:
+        name: OpenSSH.Client
+        state: absent
+      when: client_result.found
+      tags: uninstall
+
+    - name: Uninstall OpenSSH.Server if present
+      win_feature:
+        name: OpenSSH.Server
+        state: absent
+      when: server_result.found
+      tags: uninstall
+
+    - name: Install OpenSSH.Client
+      win_feature:
+        name: OpenSSH.Client
+        state: present
+      retries: 3
+      delay: 10
+      register: client_install
+      until: client_install is success
+      tags: install
+
+    - name: Install OpenSSH.Server
+      win_feature:
+        name: OpenSSH.Server
+        state: present
+      retries: 3
+      delay: 10
+      register: server_install
+      until: server_install is success
+      tags: install
+
+    - name: Ensure sshd service is started and enabled
+      win_service:
+        name: sshd
+        start_mode: auto
+        state: started
+      tags: service
+
+    - name: Ensure ssh-agent service is started and enabled
+      win_service:
+        name: ssh-agent
+        start_mode: auto
+        state: started
+      tags: service
+
+    - name: Allow SSH through Windows Firewall
+      win_command: New-NetFirewallRule -Name "OpenSSH-Server-In-TCP" -DisplayName "OpenSSH Server (Inbound)" -Enabled True -Direction Inbound -Protocol TCP -Action Allow -LocalPort 22
+      ignore_errors: yes
+      tags: firewall
+
+    - name: Show OpenSSH status
+      debug:
+        msg: "OpenSSH.Client and OpenSSH.Server installed successfully, sshd and ssh-agent running."
+      tags: verify
