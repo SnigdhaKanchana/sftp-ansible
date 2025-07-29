@@ -1,0 +1,169 @@
+- name: Configure OpenSSH and ACLs for FTP Export Secondary
+  hosts: all
+  gather_facts: no
+  vars_files:
+    - ../vars/agents_user.yaml
+
+  tasks:
+
+    - name: Ensure .ssh directory exists on secondary server for all users
+      win_file:
+        path: "C:/Users/{{ item }}/.ssh"
+        state: directory
+      with_items: "{{ users }}"
+
+    - name: Copy id_rsa private key to secondary server for all users
+      win_copy:
+        src: "/tmp/{{ item }}_id_rsa"
+        dest: "C:/Users/{{ item }}/.ssh/id_rsa"
+        mode: "0600"
+      with_items: "{{ users }}"
+
+    - name: Copy id_rsa.pub public key to secondary server for all users
+      win_copy:
+        src: "/tmp/{{ item }}_id_rsa.pub"
+        dest: "C:/Users/{{ item }}/.ssh/id_rsa.pub"
+        mode: "0644"
+      with_items: "{{ users }}"
+
+    - name: Copy Public Key to authorized keys
+      win_command: cmd.exe /c type C:\\Users\\{{ item }}\\.ssh\\id_rsa.pub >> C:\\Users\\{{ item }}\\.ssh\\authorized_keys
+      loop: "{{ users }}"
+
+    - name: Copy sshd_config
+      win_copy:
+        src: sshd_config
+        dest: C:/ProgramData/ssh/sshd_config
+
+    - name: Ensure SSH server is restarted
+      win_service:
+        name: sshd
+        state: restarted
+
+    - name: Ensure SSH agent is restarted
+      win_service:
+        name: ssh-agent
+        state: restarted
+
+    # AgentFiles permissions
+    - name: Deny full control on AgentFiles
+      win_acl:
+        path: C:/App/AgentFiles
+        user: ftp-export
+        rights: FullControl
+        inherit: ContainerInherit, ObjectInherit
+        propagation: NoPropagateInherit
+        state: present
+        type: deny
+
+    - name: Allow write for ftp-export in AgentFiles
+      win_acl:
+        path: C:/App/AgentFiles
+        user: ftp-export
+        rights: WriteData
+        inherit: None
+        propagation: NoPropagateInherit
+        state: present
+        type: allow
+
+    - name: Allow read and list in AgentFiles
+      win_acl:
+        path: C:/App/AgentFiles
+        user: ftp-export
+        rights: ReadData, ListDirectory
+        inherit: None
+        propagation: NoPropagateInherit
+        state: present
+        type: allow
+
+    # AgentFiles/Export
+    - name: Disable inheritance on AgentFiles/Export
+      win_acl_inheritance:
+        path: C:/App/AgentFiles/Export
+        state: absent
+
+    - name: Remove deny full control on Export
+      win_acl:
+        path: C:/App/AgentFiles/Export
+        user: ftp-export
+        rights: FullControl
+        inherit: ContainerInherit, ObjectInherit
+        propagation: NoPropagateInherit
+        state: absent
+        type: deny
+
+    - name: Deny write and delete on Export
+      win_acl:
+        path: C:/App/AgentFiles/Export
+        user: ftp-export
+        rights: WriteData, Delete
+        inherit: ContainerInherit, ObjectInherit
+        propagation: InheritOnly
+        state: present
+        type: deny
+
+    - name: Allow read on Export
+      win_acl:
+        path: C:/App/AgentFiles/Export
+        user: ftp-export
+        rights: ReadData
+        inherit: ContainerInherit, ObjectInherit
+        propagation: InheritOnly
+        state: present
+        type: allow
+
+    - name: Allow read and list on Export folders
+      win_acl:
+        path: C:/App/AgentFiles/Export
+        user: ftp-export
+        rights: ReadData, ListDirectory
+        inherit: ContainerInherit
+        propagation: InheritOnly
+        state: present
+        type: allow
+
+    # AgentFiles/WebUploads
+    - name: Disable inheritance on WebUploads
+      win_acl_inheritance:
+        path: C:/App/AgentFiles/WebUploads
+        state: absent
+
+    - name: Remove deny full control on WebUploads
+      win_acl:
+        path: C:/App/AgentFiles/WebUploads
+        user: ftp-export
+        rights: FullControl
+        inherit: ContainerInherit, ObjectInherit
+        propagation: InheritOnly
+        state: absent
+        type: deny
+
+    - name: Deny write and delete on WebUploads
+      win_acl:
+        path: C:/App/AgentFiles/WebUploads
+        user: ftp-export
+        rights: WriteData, Delete
+        inherit: ContainerInherit, ObjectInherit
+        propagation: InheritOnly
+        state: present
+        type: deny
+
+    - name: Allow read on WebUploads
+      win_acl:
+        path: C:/App/AgentFiles/WebUploads
+        user: ftp-export
+        rights: ReadData
+        inherit: ContainerInherit, ObjectInherit
+        propagation: InheritOnly
+        state: present
+        type: allow
+
+    - name: Allow read and list on WebUploads folders
+      win_acl:
+        path: C:/App/AgentFiles/WebUploads
+        user: ftp-export
+        rights: ReadData, ListDirectory
+        inherit: ContainerInherit
+        propagation: InheritOnly
+        state: present
+        type: allow
