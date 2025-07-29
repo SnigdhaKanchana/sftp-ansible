@@ -1,5 +1,5 @@
-- name: Reinstall OpenSSH on Windows VM
-  hosts: all
+- name: Install OpenSSH
+  hosts: agentprimaryserver, agentsecondaryserver
   gather_facts: yes
   tasks:
     - name: Check if OpenSSH.Client is installed
