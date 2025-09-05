@@ -33,7 +33,7 @@
     - name: Copy sshd_config
       win_copy:
         src: sshd_config
-        dest: C:/ProgramData/ssh/sshd_config
+        dest: C:/Data/ssh/sshd_config
 
     - name: Ensure SSH server is restarted
       win_service:
