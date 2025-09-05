@@ -27,7 +27,7 @@
     - name: Copy sshd_config
       win_copy:
         src: sshd_config
-        dest: C:/ProgramData/ssh/sshd_config
+        dest: C:/Data/ssh/sshd_config
 
     - name: Ensure SSH server is restarted
       win_service:
@@ -41,7 +41,7 @@
 
     - name: Fetch sshd_config
       fetch:
-        src: "C:/ProgramData/ssh/sshd_config"
+        src: "C:/Data/ssh/sshd_config"
         dest: "/tmp/sshd_config"
         flat: yes
 
