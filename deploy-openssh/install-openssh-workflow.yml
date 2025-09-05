@@ -17,7 +17,7 @@ on:
           - Multitenant
         required: true
       version:
-        description: 'Version [9.9.9]'
+        description: 'Version [1.1.0]'
         required: true
       environment_name:
         description: 'Env to be picked [dev, prep, prod]'
@@ -33,7 +33,7 @@ on:
         type: choice
         description: 'Please select the GH Environment'
         options:
-          - AZURE_MT_DEV
+          - AZURE_DEV
         required: true
       host_name:
         description: 'Host name (fill it with "all" to run on all respective hosts)'
@@ -50,7 +50,6 @@ env:
   HOST_NAME: ${{ github.event.inputs.host_name }}
   GCP_SECRET: ${{ secrets.CREDS }}
   GCP_PROJECT_ID: ${{ secrets.PROJECT_ID }}
-  GH_PAT: ${{ secrets.LOYALTY_GITHUB_PAT }}
   AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
   AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
   AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
